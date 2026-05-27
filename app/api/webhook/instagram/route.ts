@@ -146,5 +146,7 @@ async function processIncomingMessage(
     .where(eq(conversations.id, conversation.id));
 
   // 8. Enviar respuesta por Instagram
-  await sendInstagramMessage(instagramUserId, agentResponse);
+  await sendInstagramMessage(instagramUserId, agentResponse).catch((err) =>
+    console.error("Instagram send error:", err)
+  );
 }
