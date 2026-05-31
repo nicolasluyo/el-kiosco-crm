@@ -6,7 +6,7 @@ import { sendInstagramMessage, getInstagramUserProfile } from "@/lib/instagram";
 
 // GET — verificación del webhook por Meta
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
+  const searchParams = req.nextUrl.searchParams;
   const mode = searchParams.get("hub.mode");
   const token = searchParams.get("hub.verify_token");
   const challenge = searchParams.get("hub.challenge");
