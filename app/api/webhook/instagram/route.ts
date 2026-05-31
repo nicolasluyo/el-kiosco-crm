@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   const token = searchParams.get("hub.verify_token");
   const challenge = searchParams.get("hub.challenge");
 
-  if (mode === "subscribe" && token === process.env.INSTAGRAM_VERIFY_TOKEN) {
+  if (mode === "subscribe" && token === (process.env.INSTAGRAM_VERIFY_TOKEN ?? "").trim()) {
     return new NextResponse(challenge, { status: 200 });
   }
 
