@@ -1,8 +1,8 @@
 const GRAPH_API_URL = "https://graph.facebook.com/v21.0";
 
 export async function sendWhatsAppMessage(to: string, text: string) {
-  const token = process.env.WHATSAPP_ACCESS_TOKEN;
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const token = process.env.WHATSAPP_ACCESS_TOKEN?.trim();
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID?.trim();
 
   if (!token || !phoneNumberId) {
     console.warn("WhatsApp credentials not configured, skipping send.");
