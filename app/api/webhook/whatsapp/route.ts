@@ -109,28 +109,57 @@ async function processIncomingMessage(
 
   if (!conversation.agentEnabled) return;
 
-  // 4. Cargar historial
+  // 4. Debounce — esperar 4s por si vienen más mensajes seguidos
+  const savedAt = new Date();
+  await new Promise((r) => setTimeout(r, 4000));
+
+  // Verificar si llegaron mensajes más nuevos después del nuestro
+  const [freshConv] = await db
+    .select()
+    .from(conversations)
+    .where(eq(conversations.id, conversation.id));
+
+  if (freshConv && freshConv.lastMessageAt > savedAt) {
+    // Otro mensaje llegó después — esa invocación se encargará de responder
+    return;
+  }
+
+  // 5. Cargar historial completo (incluye todos los mensajes acumulados)
   const history = await db
     .select()
     .from(messages)
     .where(eq(messages.conversationId, conversation.id))
     .orderBy(messages.sentAt)
-    .limit(20);
+    .limit(30);
 
-  const messageHistory = history.slice(0, -1).map((m) => ({
-    role: m.direction === "incoming" ? ("user" as const) : ("assistant" as const),
-    content: m.content,
-  }));
+  // Encontrar todos los mensajes entrantes sin respuesta (desde el último outgoing)
+  const lastOutgoingIdx = [...history].reverse().findIndex((m) => m.direction === "outgoing");
+  const pendingIncoming = lastOutgoingIdx === -1
+    ? history.filter((m) => m.direction === "incoming")
+    : history.slice(history.length - lastOutgoingIdx).filter((m) => m.direction === "incoming");
 
-  // 5. Correr agente IA
+  // Combinar mensajes pendientes en uno solo si hay varios
+  const combinedText = pendingIncoming.length > 1
+    ? pendingIncoming.map((m) => m.content).join("\n")
+    : text;
+
+  const messageHistory = history
+    .filter((m) => m.direction === "outgoing" || !pendingIncoming.find((p) => p.id === m.id))
+    .slice(0, -pendingIncoming.length || undefined)
+    .map((m) => ({
+      role: m.direction === "incoming" ? ("user" as const) : ("assistant" as const),
+      content: m.content,
+    }));
+
+  // 6. Correr agente IA con el texto combinado
   const agentResponse = await runAgent({
     conversationId: conversation.id,
     customerId: customer.id,
     messageHistory,
-    newMessage: text,
+    newMessage: combinedText,
   });
 
-  // 6. Guardar respuesta
+  // 7. Guardar respuesta
   await db.insert(messages).values({
     conversationId: conversation.id,
     direction: "outgoing",
@@ -139,10 +168,10 @@ async function processIncomingMessage(
 
   await db
     .update(conversations)
-    .set({ messageCount: conversation.messageCount + 2, lastMessageAt: new Date() })
+    .set({ lastMessageAt: new Date() })
     .where(eq(conversations.id, conversation.id));
 
-  // 7. Enviar por WhatsApp
+  // 8. Enviar por WhatsApp
   await sendWhatsAppMessage(phone, agentResponse).catch((err) =>
     console.error("WhatsApp send error:", err)
   );
