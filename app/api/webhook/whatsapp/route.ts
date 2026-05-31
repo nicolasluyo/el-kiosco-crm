@@ -11,11 +11,12 @@ export async function GET(req: NextRequest) {
   const token = searchParams.get("hub.verify_token");
   const challenge = searchParams.get("hub.challenge");
 
-  if (mode === "subscribe" && token === process.env.WHATSAPP_VERIFY_TOKEN) {
+  const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN ?? "el_kiosco_whatsapp_2024";
+  if (mode === "subscribe" && token === verifyToken) {
     return new NextResponse(challenge, { status: 200 });
   }
 
-  return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  return NextResponse.json({ error: "Forbidden", received: token, expected_length: verifyToken.length }, { status: 403 });
 }
 
 // POST — recibe mensajes de WhatsApp
