@@ -3,7 +3,7 @@ import postgres from "postgres";
 import * as schema from "./schema";
 
 function getDb() {
-  const connectionString = process.env.DATABASE_URL ?? process.env.POSTGRES_URL;
+  const connectionString = (process.env.DATABASE_URL ?? process.env.POSTGRES_URL ?? "").trim();
   if (!connectionString) throw new Error("DATABASE_URL o POSTGRES_URL no está configurado");
   const client = postgres(connectionString, { ssl: "require" });
   return drizzle(client, { schema });
