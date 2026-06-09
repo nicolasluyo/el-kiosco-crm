@@ -52,6 +52,13 @@ async function processIncomingMessage(
   messageId: string,
   contact?: { profile?: { name?: string }; wa_id?: string }
 ) {
+  // Idempotencia — Meta puede reenviar el mismo evento varias veces
+  const [duplicate] = await db
+    .select()
+    .from(messages)
+    .where(eq(messages.instagramMessageId, messageId));
+  if (duplicate) return;
+
   // 1. Buscar o crear cliente
   let [customer] = await db
     .select()
